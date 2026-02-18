@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
-dotenv.config();
 import cors from "cors";
+
 import connectToDb from "./Database/Db.js";
 import ErrorHandler from "./MiddleWares/ErrorHandlers.js";
 import AuthRouter from "./Routes/AuthRoutes.js";
@@ -9,49 +9,59 @@ import ContactFormRouter from "./Routes/ContactFormRoutes.js";
 import adminRoutes from "./Routes/adminRoutes.js";
 import adminContactRoutes from "./Routes/adminContactRoutes.js";
 
-// ----------------------
-// 1️⃣ Create Express App
+dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 5001;
-const ALLOW_ORIGIN = process.env.ALLOW_ORIGIN || "https://lorenzo-frontend.vercel.app";
 
 // ----------------------
-// 2️⃣ Middleware
-// Body parser
-app.use(express.json());
-
-// CORS
-app.use(cors({
-  origin: ALLOW_ORIGIN,
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "Cache-Control",
-    "Expires",
-    "Pragma"
-  ],
-  credentials: true
-}));
-
-// ----------------------
-// 3️⃣ Connect to Database
+// 🔥 Connect Database (Safe for serverless)
 connectToDb();
 
 // ----------------------
-// 4️⃣ Routes
+// 🔥 Body Parser
+app.use(express.json());
+
+// ----------------------
+// 🔥 CORS (Production Ready)
+const allowedOrigins = [
+  "https://lorenzo-frontend.vercel.app",
+  "http://localhost:5173"
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true
+}));
+
+// 🔥 Handle Preflight Requests
+app.options("*", cors());
+
+// ----------------------
+// 🔥 Routes
 app.use("/api/auth", AuthRouter);
 app.use("/api/contact/v1", ContactFormRouter);
 app.use("/api/admin", adminRoutes);
-app.use("/api/admin/contact", adminContactRoutes); // Fixed conflict
+app.use("/api/admin", adminContactRoutes);
 
 // ----------------------
-// 5️⃣ Error Handler
+// 🔥 Global Error Handler
 app.use(ErrorHandler);
 
 // ----------------------
-// 6️⃣ Start Server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`CORS allowed origin: ${ALLOW_ORIGIN}`);
-});
+// 🔥 LOCAL DEVELOPMENT ONLY
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+  });
+}
+
+// ✅ EXPORT for Vercel
+export default app;

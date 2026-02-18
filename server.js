@@ -21,8 +21,7 @@
 
   // 2️⃣ CORS (Always before routes)
   app.use(cors({
-  origin: ALLOW_ORIGIN,
-  methods: ["GET", "POST", "PUT", "DELETE"],
+origin: process.env.ALLOW_ORIGIN || "https://lorenzo-frontend.vercel.app",  methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: [
     "Content-Type",
     "Authorization",

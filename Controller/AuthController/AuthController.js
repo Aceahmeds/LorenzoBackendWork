@@ -5,8 +5,8 @@ import Admin from "../../Models/Admin/AdminModels.js";
 /* ================= REGISTER ================= */
 const registerAdmin = async (req, res) => {
   try {
-    const { Name, Email, Password } = req.body;
-
+    // const { Name, Email, Password } = req.body;
+  const { Name, Email, Password } = req.body || {};
     // 1️⃣ Validation
     if (!Name || !Email || !Password) {
       return res.status(400).json({

@@ -5,8 +5,19 @@ import Admin from "../../Models/Admin/AdminModels.js";
 /* ================= REGISTER ================= */
 const registerAdmin = async (req, res) => {
   try {
-    // const { Name, Email, Password } = req.body;
-  const { Name, Email, Password } = req.body || {};
+    console.log("REGISTER METHOD:", req.method);
+    console.log("REGISTER BODY:", req.body);
+
+    // 🔒 Safe body handling
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Request body is missing",
+      });
+    }
+
+    const { Name, Email, Password } = req.body;
+
     // 1️⃣ Validation
     if (!Name || !Email || !Password) {
       return res.status(400).json({
@@ -41,64 +52,73 @@ const registerAdmin = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Register Error:", error.message);
+    console.error("REGISTER ERROR FULL:", error);
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Internal server error",
     });
   }
 };
 
+
 /* ================= LOGIN ================= */
 const loginAdmin = async (req, res) => {
   try {
+    console.log("LOGIN BODY:", req.body);
+
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Request body is missing",
+      });
+    }
+
     const { Email, Password } = req.body;
 
-    // 🔍 Check fields
     if (!Email || !Password) {
       return res.status(400).json({
+        success: false,
         message: "Email and password are required",
       });
     }
 
-    // 🔥 VERY IMPORTANT: +Password
     const admin = await Admin.findOne({ Email }).select("+Password");
 
     if (!admin) {
       return res.status(401).json({
+        success: false,
         message: "Invalid email or password",
       });
     }
 
-    // 🔐 Compare password
     const isMatch = await bcrypt.compare(Password, admin.Password);
 
     if (!isMatch) {
       return res.status(401).json({
+        success: false,
         message: "Invalid email or password",
       });
     }
 
-    // 🔑 Generate token
     const token = jwt.sign(
       { id: admin._id },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    // ❌ Remove password before sending response
     admin.Password = undefined;
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       token,
       admin,
     });
 
   } catch (error) {
-    console.error("LOGIN ERROR:", error);
-    res.status(500).json({
-      message: "Server error",
+    console.error("LOGIN ERROR FULL:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
     });
   }
 };
@@ -106,13 +126,16 @@ const loginAdmin = async (req, res) => {
 
 /* ================= PROTECT MIDDLEWARE ================= */
 const protect = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Not authorized, no token" });
-  }
-
   try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized, no token",
+      });
+    }
+
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
@@ -120,7 +143,10 @@ const protect = (req, res, next) => {
     next();
 
   } catch (error) {
-    return res.status(401).json({ message: "Invalid token" });
+    return res.status(401).json({
+      success: false,
+      message: "Invalid token",
+    });
   }
 };
 
